@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Match CV × Vaga</title>
+<style>
+:root{--bg:#F2F4F3;--card:#fff;--ink:#17211F;--mut:#55645F;--line:#D3DBD8;--ac:#0F5C4D;--acx:#fff;--ok:#1B7F4B;--mid:#9A6200;--bad:#B3261E}
+@media (prefers-color-scheme:dark){:root{--bg:#121816;--card:#1A2220;--ink:#E8EEEC;--mut:#9DB0AA;--line:#2D3A37;--ac:#4FC3A8;--acx:#0B1412;--ok:#5FD08F;--mid:#E3AE4A;--bad:#FF8A80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:780px;margin:0 auto;padding:28px 18px 64px}
+h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:1.15rem;margin:0 0 10px}
+h3{font-size:1rem;margin:20px 0 8px}
+.sub,.hint{color:var(--mut);font-size:.93rem}
+section,details.cfg{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
+details.cfg>summary{cursor:pointer;font-weight:600}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:.93rem}
+input,select,textarea{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{min-height:170px;resize:vertical}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+button{font:inherit;font-weight:600;border-radius:6px;padding:9px 16px;border:1px solid var(--ac);background:var(--ac);color:var(--acx);cursor:pointer;margin:12px 8px 0 0}
+button.sec{background:transparent;color:var(--ink);border-color:var(--line)}
+button:disabled{opacity:.55;cursor:wait}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>*{flex:1 1 200px}
+#status{margin-top:12px;min-height:1.4em;font-size:.93rem}
+.err{color:var(--bad);font-weight:600}
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score b{font-size:3rem;line-height:1}
+.bar{height:10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:8px 0 14px}
+.bar i{display:block;height:100%;background:var(--ac)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+th,td{text-align:left;vertical-align:top;padding:8px 6px;border-bottom:1px solid var(--line)}
+.meets{color:var(--ok)}.partial{color:var(--mid)}.not_met{color:var(--bad)}
+.st{font-weight:700;white-space:nowrap}
+q{color:var(--mut)}
+.wrap{overflow-x:auto}
+.chips span{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:1px 8px;margin:0 6px 6px 0;font-size:.88rem}
+#cvjson{min-height:240px;font:13px/1.45 ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<main>
+<h1>Match entre currículo e vaga</h1>
+<p class="sub">Suba seu currículo, cole uma vaga e veja o que você atende, o que falta e o que ajustar.</p>
+<p class="hint">Seu currículo e a vaga são enviados ao provedor de IA por uma função segura e ficam salvos no seu banco de dados do Supabase.</p>
+
+<section>
+<h2>1. Seu currículo</h2>
+<label for="file">Enviar arquivo (PDF, DOCX ou TXT)</label>
+<input id="file" type="file" accept=".pdf,.docx,.txt">
+<label for="cv">Ou cole o texto do currículo</label>
+<textarea id="cv" placeholder="Cole o texto do seu currículo aqui"></textarea>
+<button id="struct">Estruturar currículo</button>
+<div id="cvout"></div>
+</section>
+
+<section>
+<h2>2. A vaga</h2>
+<label for="job">Cole a descrição completa da vaga</label>
+<textarea id="job" placeholder="Cole aqui o título, as responsabilidades e os requisitos da vaga"></textarea>
+<button id="go">Analisar</button>
+<div id="status" role="status" aria-live="polite"></div>
+</section>
+
+<section id="res" hidden></section>
+
+<section>
+<h2>Histórico de vagas</h2>
+<label for="busca">Pesquisar por cargo, empresa, trecho da vaga ou ID (ex.: 3)</label>
+<input id="busca" type="search" autocomplete="off">
+<div id="hist"></div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+let cvJson=null;
+
+
+function status(msg,isErr){const s=$('status');s.textContent=msg;s.className=isErr?'err':''}
+function el(t,txt,cls){const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
+
+// ---------- início ----------
+let cvId=LS.get('cv_id');
+async function init(){
+  $('cv').value=LS.get('cv_text')||'';
+  try{
+    const c=await api('cv_ultimo');
+    if(c){cvId=c.curriculo_id;cvJson=c.dados;LS.set('cv_id',cvId);if(!$('cv').value)$('cv').value=c.texto;showCv()}
+    loadHist();
+  }catch(e){status(e.message,true)}
+}
+$('cv').oninput=()=>LS.set('cv_text',$('cv').value);
+
+// ---------- leitura de arquivos ----------
+function loadScript(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('Não foi possível carregar a biblioteca de leitura. Verifique a internet ou cole o texto do currículo.'));document.head.appendChild(s)})}
+async function readPdf(buf){
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  if(!window.pdfjsLib){
+    await loadScript(base+'pdf.min.js');
+    const w=await (await fetch(base+'pdf.worker.min.js')).blob();
+    pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(w);
+  }
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out='';
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();out+=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n'}
+  return out;
+}
+async function readDocx(buf){
+  if(!window.mammoth)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+  return (await mammoth.extractRawText({arrayBuffer:buf})).value;
+}
+$('file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  status('Lendo arquivo…');
+  try{
+    const n=f.name.toLowerCase();let t='';
+    if(n.endsWith('.pdf'))t=await readPdf(await f.arrayBuffer());
+    else if(n.endsWith('.docx'))t=await readDocx(await f.arrayBuffer());
+    else t=await f.text();
+    t=t.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    $('cv').value=t;LS.set('cv_text',t);
+    if(t.length<200)status('Pouco texto extraído. Se o arquivo for imagem ou tiver design complexo, cole o texto do currículo no campo ao lado.',true);
+    else status('Arquivo lido. Confira o texto e clique em “Estruturar currículo”.');
+  }catch(err){status('Não consegui ler o arquivo: '+err.message+' Cole o texto do currículo no campo.',true)}
+};
+
+// ---------- servidor (função do Supabase) ----------
+const API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/api';
+async function api(action,body,tentou){
+  let r;
+  try{r=await fetch(API,{method:'POST',headers:{'content-type':'application/json','x-codigo-acesso':LS.get('acesso')||''},body:JSON.stringify(Object.assign({action},body||{}))})}
+  catch(e){throw new Error('Não consegui falar com o servidor. Verifique sua internet.')}
+  if(r.status===401&&!tentou){const c=prompt('Digite seu código de acesso:');if(c){LS.set('acesso',c.trim());return api(action,body,true)}}
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||('Erro '+r.status+' no servidor.'));
+  return d;
+}
+
+// ---------- 1. estruturar currículo ----------
+function showCv(){
+  const o=$('cvout');o.textContent='';
+  const c=cvJson,h=c.habilidades||{};
+  o.appendChild(el('h3','Perfil estruturado'));
+  o.appendChild(el('p',[c.nome,c.titulo].filter(Boolean).join(' — ')||'Sem nome identificado'));
+  o.appendChild(el('p',(c.experiencias||[]).length+' experiência(s), '+(c.projetos||[]).length+' projeto(s), '+(c.formacao||[]).length+' formação(ões).','hint'));
+  const ch=el('div',null,'chips');(h.tecnicas||[]).forEach(s=>ch.appendChild(el('span',s)));o.appendChild(ch);
+  const d=el('details');d.appendChild(el('summary','Revisar e corrigir os dados lidos (editável)'));
+  const ta=el('textarea');ta.id='cvjson';ta.setAttribute('aria-label','Dados do currículo em JSON');ta.value=JSON.stringify(c,null,2);
+  ta.oninput=()=>{try{cvJson=JSON.parse(ta.value);ta.style.borderColor=''}catch(e){ta.style.borderColor='var(--bad)'}};ta.onchange=()=>{if(cvId&&!ta.style.borderColor)api('cv_salvar',{curriculo_id:cvId,dados:cvJson}).then(()=>status('Correções salvas.')).catch(e=>status(e.message,true))};
+  d.appendChild(ta);d.appendChild(el('p','Se algo foi lido errado, corrija aqui. A análise usa estes dados.','hint'));o.appendChild(d);
+}
+$('struct').onclick=async()=>{
+  const t=$('cv').value.trim();
+  if(t.length<100)return status('Envie um arquivo ou cole o texto do currículo antes de estruturar.',true);
+  const b=$('struct');b.disabled=true;status('Estruturando currículo…');
+  try{const d=await api('cv_estruturar',{texto:t});cvJson=d.dados;cvId=d.curriculo_id;LS.set('cv_id',cvId);showCv();status('Currículo estruturado. Agora cole a vaga.')}
+  catch(e){status(e.message,true)}finally{b.disabled=false}
+};
+
+// ---------- 2. analisar vaga ----------
+const W={obrigatorio:3,desejavel:1},V={meets:1,partial:.5,not_met:0},SYM={meets:'✓ Atende',partial:'~ Parcial',not_met:'✕ Não atende'};
+const norm=s=>(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+$('go').onclick=async()=>{
+  const job=$('job').value.trim(),cv=$('cv').value.trim();
+  if(!cvId)return status('Estruture o currículo primeiro (passo 1).',true);
+  if(job.length<150)return status('Cole a descrição completa da vaga (está curta demais).',true);
+  const b=$('go');b.disabled=true;status('Analisando a vaga…');
+  try{
+    const r=await api('analisar',{curriculo_id:cvId,vaga:job});
+    render(r);loadHist();status('Análise pronta.');$('res').scrollIntoView({behavior:'smooth'});
+  }catch(e){status(e.message,true)}finally{b.disabled=false}
+};
+function render(r){
+  const reqs=r.requisitos||[],pct=r.nota,lvl=r.nivel;
+  const o=$('res');o.hidden=false;o.textContent='';
+  o.appendChild(el('h2','#'+r.id_vaga+' · '+([r.cargo,r.empresa].filter(Boolean).join(' · ')||'Resultado da análise')));
+  const sc=el('div',null,'score');sc.appendChild(el('b',pct+'%'));sc.appendChild(el('span',lvl));o.appendChild(sc);
+  const bar=el('div',null,'bar');const i=el('i');i.style.width=pct+'%';bar.appendChild(i);o.appendChild(bar);
+  o.appendChild(el('p',r.resumo||''));
+  o.appendChild(el('p','A nota é calculada pelo programa: requisitos obrigatórios pesam 3, desejáveis pesam 1, e “parcial” vale metade.','hint'));
+  const list=(title,arr,empty)=>{o.appendChild(el('h3',title));if(!arr.length)return o.appendChild(el('p',empty,'hint'));const u=el('ul');arr.forEach(x=>u.appendChild(x));o.appendChild(u)};
+  const item=q=>{const li=el('li');li.appendChild(el('strong',q.texto));li.appendChild(el('span',' ('+(q.tipo==='obrigatorio'?'obrigatório':'desejável')+') — '+(q.comentario||'')));return li};
+  list('O que você atende',reqs.filter(q=>q.status!=='not_met').map(item),'Nenhum requisito atendido com evidência no currículo.');
+  list('Gaps: o que falta',reqs.filter(q=>q.status==='not_met').map(item),'Nenhum gap encontrado.');
+  list('Sugestões para o currículo',(r.sugestoes||[]).map(s=>el('li',s)),'Sem sugestões.');
+  o.appendChild(el('h3','Detalhe por requisito'));
+  const w=el('div',null,'wrap'),t=el('table'),hd=el('tr');['Requisito','Situação','Evidência no currículo'].forEach(x=>hd.appendChild(el('th',x)));t.appendChild(hd);
+  reqs.forEach(q=>{
+    const tr=el('tr'),a=el('td',q.texto+' ('+(q.tipo==='obrigatorio'?'obrigatório':'desejável')+')'),s=el('td',SYM[q.status],'st '+q.status),e=el('td');
+    if(q.evidencia){const qq=el('q','“'+q.evidencia+'”');e.appendChild(qq);if(q.aviso){e.appendChild(el('br'));e.appendChild(el('span','⚠ '+q.aviso,'partial'))}}else e.textContent='—';
+    tr.append(a,s,e);t.appendChild(tr);
+  });
+  w.appendChild(t);o.appendChild(w);candForm(r);
+}
+const STS={interessada:'Interessada',candidatou:'Candidatei',entrevista:'Entrevista',oferta:'Oferta',recusada:'Recusada',desistiu:'Desisti'};
+function candForm(r){
+  const o=$('res'),c=r.candidatura||{};
+  o.appendChild(el('h3','Candidatura'));
+  const s=el('select');s.setAttribute('aria-label','Situação da candidatura');
+  Object.keys(STS).forEach(k=>{const op=el('option',STS[k]);op.value=k;if(k===(c.status||'interessada'))op.selected=true;s.appendChild(op)});
+  const dt=el('input');dt.type='date';dt.value=c.data_candidatura||'';dt.setAttribute('aria-label','Data da candidatura');
+  const ob=el('textarea');ob.style.minHeight='70px';ob.placeholder='Observações (contato, link, próximos passos)';ob.value=c.observacoes||'';ob.setAttribute('aria-label','Observações');
+  const b=el('button','Salvar candidatura'),row=el('div',null,'row');
+  b.onclick=async()=>{b.disabled=true;try{await api('candidatura',{vaga_id:r.id,status:s.value,data_candidatura:dt.value,observacoes:ob.value});status('Candidatura salva.');loadHist()}catch(e){status(e.message,true)}finally{b.disabled=false}};
+  row.append(s,dt);o.append(row,ob,b);
+}
+let tmr;
+$('busca').oninput=()=>{clearTimeout(tmr);tmr=setTimeout(loadHist,300)};
+async function loadHist(){
+  const box=$('hist');
+  try{
+    const l=await api('historico',{busca:$('busca').value});
+    box.textContent='';
+    if(!l.length){box.appendChild(el('p',$('busca').value?'Nenhuma vaga encontrada para essa busca.':'Nenhuma vaga analisada ainda. Cole uma vaga no passo 2.','hint'));return}
+    const w=el('div',null,'wrap'),t=el('table'),hd=el('tr');
+    ['ID','Vaga','Empresa','Nota','Candidatura','Data',''].forEach(x=>hd.appendChild(el('th',x)));t.appendChild(hd);
+    l.forEach(v=>{
+      const tr=el('tr'),bt=el('button','Abrir'),a=el('td');bt.className='sec';bt.style.margin='0';bt.setAttribute('aria-label','Abrir vaga '+v.id_vaga);
+      bt.onclick=async()=>{try{render(await api('detalhe',{id:v.id}));$('res').scrollIntoView({behavior:'smooth'})}catch(e){status(e.message,true)}};
+      a.appendChild(bt);
+      tr.append(el('td','#'+v.id_vaga),el('td',v.cargo||'—'),el('td',v.empresa||'—'),el('td',v.nota+'%'),el('td',STS[v.status]||'—'),el('td',new Date(v.criado_em).toLocaleDateString('pt-BR')),a);
+      t.appendChild(tr);
+    });
+    w.appendChild(t);box.appendChild(w);
+  }catch(e){status(e.message,true)}
+}
+init();
+</script>
+</body>
+</html>
