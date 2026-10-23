@@ -81,6 +81,9 @@ q{color:var(--mut)}
 #app main>section:first-of-type{margin-top:-34px}
 #app main section{border-top:4px solid var(--ac)}
 @media (max-width:560px){.bar h1{font-size:1.55rem}}
+.nav{position:sticky;top:0;z-index:20;background:#8E331D;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.nav-in{max-width:780px;margin:0 auto;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.bar-in{padding-top:30px}
 </style>
 </head>
 <body>
@@ -112,10 +115,10 @@ q{color:var(--mut)}
 </div>
 </div>
 <div id="app" hidden>
+<nav class="nav" aria-label="Conta"><div class="nav-in"><div class="brand"><span class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5A2112" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="m8.5 11 2 2 3.5-4"/></svg></span>Match de Vagas</div>
+<div class="who-box"><span id="who"></span><button type="button" id="out" class="outbtn">Sair</button></div></div></nav>
 <header class="bar"><span class="blob b1"></span>
 <div class="bar-in">
-<div class="bar-top"><div class="brand"><span class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5A2112" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="m8.5 11 2 2 3.5-4"/></svg></span>Match de Vagas</div>
-<div class="who-box"><span id="who"></span><button type="button" id="out" class="outbtn">Sair</button></div></div>
 <h1>Vamos encontrar a sua próxima vaga?</h1>
 <p>Suba seu currículo, cole uma vaga e veja o que você atende, o que falta e o que ajustar.</p>
 <p class="priv">Seu currículo e a vaga são enviados ao provedor de IA por uma função segura e ficam salvos no seu banco de dados do Supabase.</p>
