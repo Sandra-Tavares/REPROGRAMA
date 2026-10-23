@@ -1,5 +1,0 @@
-# Nunca envie a chave de API para o GitHub
-.env
-chave.env
-__pycache__/
-*.pyc
