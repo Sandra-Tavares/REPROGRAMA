@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Match CV × Vaga</title>
+<style>
+:root{--bg:#F8F3EF;--card:#fff;--ink:#2A1D18;--mut:#6B5A52;--line:#E4D8D1;--ac:#B4472D;--acx:#fff;--ok:#1B7F4B;--mid:#9A6200;--bad:#A1123A}
+@media (prefers-color-scheme:dark){:root{--bg:#1B1411;--card:#261C18;--ink:#F5ECE7;--mut:#BFAAA0;--line:#3D2E28;--ac:#EE8A6C;--acx:#2A100A;--ok:#5FD08F;--mid:#E3AE4A;--bad:#FF8FA3}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:780px;margin:0 auto;padding:28px 18px 64px}
+h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:1.15rem;margin:0 0 10px}
+h3{font-size:1rem;margin:20px 0 8px}
+.sub,.hint{color:var(--mut);font-size:.93rem}
+section,details.cfg{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
+details.cfg>summary{cursor:pointer;font-weight:600}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:.93rem}
+input,select,textarea{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+textarea{min-height:170px;resize:vertical}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+button{font:inherit;font-weight:600;border-radius:6px;padding:9px 16px;border:1px solid var(--ac);background:var(--ac);color:var(--acx);cursor:pointer;margin:12px 8px 0 0}
+button.sec{background:transparent;color:var(--ink);border-color:var(--line)}
+button:disabled{opacity:.55;cursor:wait}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>*{flex:1 1 200px}
+#status{margin-top:12px;min-height:1.4em;font-size:.93rem}
+.err{color:var(--bad);font-weight:600}
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score b{font-size:3rem;line-height:1}
+.bar{height:10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:8px 0 14px}
+.bar i{display:block;height:100%;background:var(--ac)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+th,td{text-align:left;vertical-align:top;padding:8px 6px;border-bottom:1px solid var(--line)}
+.meets{color:var(--ok)}.partial{color:var(--mid)}.not_met{color:var(--bad)}
+.st{font-weight:700;white-space:nowrap}
+q{color:var(--mut)}
+.wrap{overflow-x:auto}
+.chips span{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:1px 8px;margin:0 6px 6px 0;font-size:.88rem}
+#cvjson{min-height:240px;font:13px/1.45 ui-monospace,Consolas,monospace}
+
+.lg{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.hero{position:relative;overflow:hidden;color:#fff;padding:48px 44px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(135deg,#8E331D 0%,#B4472D 55%,#C85F3B 100%)}
+.hero>*{position:relative;z-index:1}
+.hero h1{font-size:2.4rem;line-height:1.12;margin:20px 0 12px;font-weight:800;max-width:17ch}
+.hero p{font-size:1.05rem;max-width:46ch;margin:0;opacity:.95}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+.logo{width:40px;height:40px;border-radius:11px;background:#FFC93C;display:grid;place-items:center}
+.perks{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:12px}
+.perks li{display:flex;align-items:center;gap:12px;font-weight:600}
+.perks i{font-style:normal;width:26px;height:26px;flex:none;border-radius:50%;background:#FFC93C;color:#5A2112;display:grid;place-items:center;font-weight:800;font-size:.9rem}
+.blob{position:absolute;border-radius:50%;z-index:0}
+.b1{width:340px;height:340px;right:-110px;top:-90px;background:rgba(255,201,60,.22)}
+.b2{width:260px;height:260px;left:-80px;bottom:-90px;background:rgba(255,255,255,.12)}
+.box{align-self:center;justify-self:center;width:min(100%,420px);padding:40px 28px}
+.box h2{font-size:1.6rem;margin:0 0 4px}
+.box input{background:var(--card)}
+.tabs{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin:18px 0 2px}
+.tabs button{flex:1;margin:0;background:transparent;color:var(--mut);border:0;padding:9px}
+.tabs button[aria-selected=true]{background:var(--ac);color:var(--acx)}
+#lb{width:100%;margin:18px 0 0;padding:12px;font-size:1rem}
+#lmsg{min-height:1.4em;font-size:.93rem;margin:12px 0 0}
+.box a{color:var(--ac);font-weight:600}
+.top{display:flex;justify-content:flex-end;align-items:center;gap:12px;font-size:.9rem;color:var(--mut)}
+.top button{margin:0;padding:6px 12px}
+@media (max-width:820px){.lg{grid-template-columns:1fr}.hero{padding:32px 22px}.hero h1{font-size:1.7rem}.box{padding:28px 20px 40px}}
+.bar{position:relative;overflow:hidden;color:#fff;background:linear-gradient(135deg,#8E331D 0%,#B4472D 55%,#C85F3B 100%)}
+.bar .b1{width:300px;height:300px;right:-90px;top:-120px;background:rgba(255,201,60,.22)}
+.bar-in{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:18px 18px 62px}
+.bar-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+.bar h1{font-size:2rem;font-weight:800;line-height:1.15;margin:0 0 8px}
+.bar p{margin:0;max-width:56ch;opacity:.95}
+.bar .priv{font-size:.85rem;opacity:.8;margin-top:10px}
+.who-box{display:flex;align-items:center;gap:10px;font-size:.9rem}
+.who-box #who{overflow-wrap:anywhere}
+.outbtn{margin:0;padding:6px 14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.6);color:#fff}
+.outbtn:hover{background:rgba(255,255,255,.3)}
+#app main{position:relative;z-index:1;padding-top:0}
+#app main>section:first-of-type{margin-top:-34px}
+#app main section{border-top:4px solid var(--ac)}
+@media (max-width:560px){.bar h1{font-size:1.55rem}}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+<div class="lg">
+<aside class="hero">
+<div class="brand"><span class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5A2112" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="m8.5 11 2 2 3.5-4"/></svg></span>Match de Vagas</div>
+<h1>Sua próxima oportunidade começa aqui</h1>
+<p>Descubra em minutos o quanto o seu currículo combina com cada vaga e saiba exatamente o que fazer para se destacar.</p>
+<ul class="perks">
+<li><i aria-hidden="true">✓</i>Nota de compatibilidade clara e explicada</li>
+<li><i aria-hidden="true">✓</i>Veja o que você já atende e onde pode crescer</li>
+<li><i aria-hidden="true">✓</i>Histórico das vagas e das suas candidaturas</li>
+</ul>
+<span class="blob b1"></span><span class="blob b2"></span>
+</aside>
+<div class="box">
+<h2 id="lt">Boas-vindas de volta!</h2>
+<p class="sub" id="ls">Entre para analisar suas vagas.</p>
+<div class="tabs" id="tabs" role="group" aria-label="Escolha uma opção"><button type="button" id="tabE" aria-selected="true">Entrar</button><button type="button" id="tabC" aria-selected="false">Criar conta</button></div>
+<form id="lf">
+<div id="emw"><label for="em">E-mail</label><input id="em" type="email" autocomplete="email" required></div>
+<label for="pw" id="pwl">Senha</label><input id="pw" type="password" autocomplete="current-password" required minlength="8">
+<button id="lb" type="submit">Entrar</button>
+<p id="fg"><a href="#" id="forgot">Esqueci minha senha</a></p>
+<p id="lmsg" role="status" aria-live="polite"></p>
+</form>
+</div>
+</div>
+</div>
+<div id="app" hidden>
+<header class="bar"><span class="blob b1"></span>
+<div class="bar-in">
+<div class="bar-top"><div class="brand"><span class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5A2112" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="m8.5 11 2 2 3.5-4"/></svg></span>Match de Vagas</div>
+<div class="who-box"><span id="who"></span><button type="button" id="out" class="outbtn">Sair</button></div></div>
+<h1>Vamos encontrar a sua próxima vaga?</h1>
+<p>Suba seu currículo, cole uma vaga e veja o que você atende, o que falta e o que ajustar.</p>
+<p class="priv">Seu currículo e a vaga são enviados ao provedor de IA por uma função segura e ficam salvos no seu banco de dados do Supabase.</p>
+</div></header>
+<main>
+
+<section>
+<h2>1. Seu currículo</h2>
+<label for="file">Enviar arquivo (PDF, DOCX ou TXT)</label>
+<input id="file" type="file" accept=".pdf,.docx,.txt">
+<label for="cv">Ou cole o texto do currículo</label>
+<textarea id="cv" placeholder="Cole o texto do seu currículo aqui"></textarea>
+<button id="struct">Estruturar currículo</button>
+<div id="cvout"></div>
+</section>
+
+<section>
+<h2>2. A vaga</h2>
+<label for="job">Cole a descrição completa da vaga</label>
+<textarea id="job" placeholder="Cole aqui o título, as responsabilidades e os requisitos da vaga"></textarea>
+<button id="go">Analisar</button>
+<div id="status" role="status" aria-live="polite"></div>
+</section>
+
+<section id="res" hidden></section>
+
+<section>
+<h2>Histórico de vagas</h2>
+<label for="busca">Pesquisar por cargo, empresa, trecho da vaga ou ID (ex.: 3)</label>
+<input id="busca" type="search" autocomplete="off">
+<div id="hist"></div>
+</section>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+let cvJson=null;
+
+
+function status(msg,isErr){const s=$('status');s.textContent=msg;s.className=isErr?'err':''}
+function el(t,txt,cls){const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
+
+// ---------- início ----------
+let cvId=null,uid=null;
+async function init(){
+  $('cv').value=LS.get('cv_text')||'';
+  try{
+    const c=await api('cv_ultimo');
+    if(c){cvId=c.curriculo_id;cvJson=c.dados;if(!$('cv').value)$('cv').value=c.texto;showCv()}
+    loadHist();
+  }catch(e){status(e.message,true)}
+}
+$('cv').oninput=()=>LS.set('cv_text',$('cv').value);
+
+// ---------- leitura de arquivos ----------
+function loadScript(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('Não foi possível carregar a biblioteca de leitura. Verifique a internet ou cole o texto do currículo.'));document.head.appendChild(s)})}
+async function readPdf(buf){
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  if(!window.pdfjsLib){
+    await loadScript(base+'pdf.min.js');
+    const w=await (await fetch(base+'pdf.worker.min.js')).blob();
+    pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(w);
+  }
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out='';
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();out+=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n'}
+  return out;
+}
+async function readDocx(buf){
+  if(!window.mammoth)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+  return (await mammoth.extractRawText({arrayBuffer:buf})).value;
+}
+$('file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  status('Lendo arquivo…');
+  try{
+    const n=f.name.toLowerCase();let t='';
+    if(n.endsWith('.pdf'))t=await readPdf(await f.arrayBuffer());
+    else if(n.endsWith('.docx'))t=await readDocx(await f.arrayBuffer());
+    else t=await f.text();
+    t=t.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    $('cv').value=t;LS.set('cv_text',t);
+    if(t.length<200)status('Pouco texto extraído. Se o arquivo for imagem ou tiver design complexo, cole o texto do currículo no campo ao lado.',true);
+    else status('Arquivo lido. Confira o texto e clique em “Estruturar currículo”.');
+  }catch(err){status('Não consegui ler o arquivo: '+err.message+' Cole o texto do currículo no campo.',true)}
+};
+
+// ---------- servidor (função do Supabase) ----------
+const API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/api';
+const SB=supabase.createClient('https://vzyvnlboghpzlewirook.supabase.co','sb_publishable_B4elnC2qw2D_xGueQCwArQ_65lwTVG9');
+async function api(action,body){
+  const {data:{session}}=await SB.auth.getSession();
+  if(!session)throw new Error('Sua sessão terminou. Entre novamente.');
+  let r;
+  try{r=await fetch(API,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify(Object.assign({action},body||{}))})}
+  catch(e){throw new Error('Não consegui falar com o servidor. Verifique sua internet.')}
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)SB.auth.signOut();
+  if(!r.ok)throw new Error(d.error||('Erro '+r.status+' no servidor.'));
+  return d;
+}
+
+// ---------- 1. estruturar currículo ----------
+function showCv(){
+  const o=$('cvout');o.textContent='';
+  const c=cvJson,h=c.habilidades||{};
+  o.appendChild(el('h3','Perfil estruturado'));
+  o.appendChild(el('p',[c.nome,c.titulo].filter(Boolean).join(' — ')||'Sem nome identificado'));
+  o.appendChild(el('p',(c.experiencias||[]).length+' experiência(s), '+(c.projetos||[]).length+' projeto(s), '+(c.formacao||[]).length+' formação(ões).','hint'));
+  const ch=el('div',null,'chips');(h.tecnicas||[]).forEach(s=>ch.appendChild(el('span',s)));o.appendChild(ch);
+  const d=el('details');d.appendChild(el('summary','Revisar e corrigir os dados lidos (editável)'));
+  const ta=el('textarea');ta.id='cvjson';ta.setAttribute('aria-label','Dados do currículo em JSON');ta.value=JSON.stringify(c,null,2);
+  ta.oninput=()=>{try{cvJson=JSON.parse(ta.value);ta.style.borderColor=''}catch(e){ta.style.borderColor='var(--bad)'}};ta.onchange=()=>{if(cvId&&!ta.style.borderColor)api('cv_salvar',{curriculo_id:cvId,dados:cvJson}).then(()=>status('Correções salvas.')).catch(e=>status(e.message,true))};
+  d.appendChild(ta);d.appendChild(el('p','Se algo foi lido errado, corrija aqui. A análise usa estes dados.','hint'));o.appendChild(d);
+}
+$('struct').onclick=async()=>{
+  const t=$('cv').value.trim();
+  if(t.length<100)return status('Envie um arquivo ou cole o texto do currículo antes de estruturar.',true);
+  const b=$('struct');b.disabled=true;status('Estruturando currículo…');
+  try{const d=await api('cv_estruturar',{texto:t});cvJson=d.dados;cvId=d.curriculo_id;LS.set('cv_id',cvId);showCv();status('Currículo estruturado. Agora cole a vaga.')}
+  catch(e){status(e.message,true)}finally{b.disabled=false}
+};
+
+// ---------- 2. analisar vaga ----------
+const W={obrigatorio:3,desejavel:1},V={meets:1,partial:.5,not_met:0},SYM={meets:'✓ Atende',partial:'~ Parcial',not_met:'✕ Não atende'};
+const norm=s=>(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+$('go').onclick=async()=>{
+  const job=$('job').value.trim(),cv=$('cv').value.trim();
+  if(!cvId)return status('Estruture o currículo primeiro (passo 1).',true);
+  if(job.length<150)return status('Cole a descrição completa da vaga (está curta demais).',true);
+  const b=$('go');b.disabled=true;status('Analisando a vaga…');
+  try{
+    const r=await api('analisar',{curriculo_id:cvId,vaga:job});
+    render(r);loadHist();status('Análise pronta.');$('res').scrollIntoView({behavior:'smooth'});
+  }catch(e){status(e.message,true)}finally{b.disabled=false}
+};
+function render(r){
+  const reqs=r.requisitos||[],pct=r.nota,lvl=r.nivel;
+  const o=$('res');o.hidden=false;o.textContent='';
+  o.appendChild(el('h2','#'+r.id_vaga+' · '+([r.cargo,r.empresa].filter(Boolean).join(' · ')||'Resultado da análise')));
+  const sc=el('div',null,'score');sc.appendChild(el('b',pct+'%'));sc.appendChild(el('span',lvl));o.appendChild(sc);
+  const bar=el('div',null,'bar');const i=el('i');i.style.width=pct+'%';bar.appendChild(i);o.appendChild(bar);
+  o.appendChild(el('p',r.resumo||''));
+  o.appendChild(el('p','A nota é calculada pelo programa: requisitos obrigatórios pesam 3, desejáveis pesam 1, e “parcial” vale metade.','hint'));
+  const list=(title,arr,empty)=>{o.appendChild(el('h3',title));if(!arr.length)return o.appendChild(el('p',empty,'hint'));const u=el('ul');arr.forEach(x=>u.appendChild(x));o.appendChild(u)};
+  const item=q=>{const li=el('li');li.appendChild(el('strong',q.texto));li.appendChild(el('span',' ('+(q.tipo==='obrigatorio'?'obrigatório':'desejável')+') — '+(q.comentario||'')));return li};
+  list('O que você atende',reqs.filter(q=>q.status!=='not_met').map(item),'Nenhum requisito atendido com evidência no currículo.');
+  list('Gaps: o que falta',reqs.filter(q=>q.status==='not_met').map(item),'Nenhum gap encontrado.');
+  list('Sugestões para o currículo',(r.sugestoes||[]).map(s=>el('li',s)),'Sem sugestões.');
+  o.appendChild(el('h3','Detalhe por requisito'));
+  const w=el('div',null,'wrap'),t=el('table'),hd=el('tr');['Requisito','Situação','Evidência no currículo'].forEach(x=>hd.appendChild(el('th',x)));t.appendChild(hd);
+  reqs.forEach(q=>{
+    const tr=el('tr'),a=el('td',q.texto+' ('+(q.tipo==='obrigatorio'?'obrigatório':'desejável')+')'),s=el('td',SYM[q.status],'st '+q.status),e=el('td');
+    if(q.evidencia){const qq=el('q','“'+q.evidencia+'”');e.appendChild(qq);if(q.aviso){e.appendChild(el('br'));e.appendChild(el('span','⚠ '+q.aviso,'partial'))}}else e.textContent='—';
+    tr.append(a,s,e);t.appendChild(tr);
+  });
+  w.appendChild(t);o.appendChild(w);candForm(r);
+}
+const STS={interessada:'Interessada',candidatou:'Candidatei',entrevista:'Entrevista',oferta:'Oferta',recusada:'Recusada',desistiu:'Desisti'};
+function candForm(r){
+  const o=$('res'),c=r.candidatura||{};
+  o.appendChild(el('h3','Candidatura'));
+  const s=el('select');s.setAttribute('aria-label','Situação da candidatura');
+  Object.keys(STS).forEach(k=>{const op=el('option',STS[k]);op.value=k;if(k===(c.status||'interessada'))op.selected=true;s.appendChild(op)});
+  const dt=el('input');dt.type='date';dt.value=c.data_candidatura||'';dt.setAttribute('aria-label','Data da candidatura');
+  const ob=el('textarea');ob.style.minHeight='70px';ob.placeholder='Observações (contato, link, próximos passos)';ob.value=c.observacoes||'';ob.setAttribute('aria-label','Observações');
+  const b=el('button','Salvar candidatura'),row=el('div',null,'row');
+  b.onclick=async()=>{b.disabled=true;try{await api('candidatura',{vaga_id:r.id,status:s.value,data_candidatura:dt.value,observacoes:ob.value});status('Candidatura salva.');loadHist()}catch(e){status(e.message,true)}finally{b.disabled=false}};
+  row.append(s,dt);o.append(row,ob,b);
+}
+let tmr;
+$('busca').oninput=()=>{clearTimeout(tmr);tmr=setTimeout(loadHist,300)};
+async function loadHist(){
+  const box=$('hist');
+  try{
+    const l=await api('historico',{busca:$('busca').value});
+    box.textContent='';
+    if(!l.length){box.appendChild(el('p',$('busca').value?'Nenhuma vaga encontrada para essa busca.':'Nenhuma vaga analisada ainda. Cole uma vaga no passo 2.','hint'));return}
+    const w=el('div',null,'wrap'),t=el('table'),hd=el('tr');
+    ['ID','Vaga','Empresa','Nota','Candidatura','Data',''].forEach(x=>hd.appendChild(el('th',x)));t.appendChild(hd);
+    l.forEach(v=>{
+      const tr=el('tr'),bt=el('button','Abrir'),a=el('td');bt.className='sec';bt.style.margin='0';bt.setAttribute('aria-label','Abrir vaga '+v.id_vaga);
+      bt.onclick=async()=>{try{render(await api('detalhe',{id:v.id}));$('res').scrollIntoView({behavior:'smooth'})}catch(e){status(e.message,true)}};
+      a.appendChild(bt);
+      tr.append(el('td','#'+v.id_vaga),el('td',v.cargo||'—'),el('td',v.empresa||'—'),el('td',v.nota+'%'),el('td',STS[v.status]||'—'),el('td',new Date(v.criado_em).toLocaleDateString('pt-BR')),a);
+      t.appendChild(tr);
+    });
+    w.appendChild(t);box.appendChild(w);
+  }catch(e){status(e.message,true)}
+}
+// ---------- login ----------
+let modo='entrar';
+const T=m=>/Invalid login/i.test(m)?'E-mail ou senha incorretos.':/not confirmed/i.test(m)?'Confirme seu e-mail pelo link que enviamos antes de entrar.':/already registered/i.test(m)?'Este e-mail já tem cadastro. Use “Entrar”.':/rate limit/i.test(m)?'Muitas tentativas. Aguarde alguns minutos e tente de novo.':/password/i.test(m)?'A senha não foi aceita. Use pelo menos 8 caracteres.':'Não foi possível concluir. Tente novamente.';
+function msg(t,erro){const m=$('lmsg');m.textContent=t||'';m.className=erro?'err':''}
+function mostrar(on){$('login').hidden=on;$('app').hidden=!on}
+function setModo(m){
+  modo=m;msg('');const nova=m==='nova',cad=m==='criar';
+  $('tabE').setAttribute('aria-selected',m==='entrar');$('tabC').setAttribute('aria-selected',cad);
+  $('tabs').hidden=nova;$('emw').hidden=nova;$('em').required=!nova;$('fg').hidden=m!=='entrar';
+  $('pw').autocomplete=m==='entrar'?'current-password':'new-password';
+  $('pwl').textContent=nova?'Nova senha':'Senha';
+  $('lb').textContent=nova?'Salvar nova senha':cad?'Criar minha conta':'Entrar';
+  $('lt').textContent=nova?'Crie sua nova senha':cad?'Vamos começar?':'Boas-vindas de volta!';
+  $('ls').textContent=nova?'Use pelo menos 8 caracteres.':cad?'Crie sua conta em menos de um minuto.':'Entre para analisar suas vagas.';
+}
+function entrou(s){mostrar(true);$('who').textContent=s.user.email;if(uid!==s.user.id){uid=s.user.id;setTimeout(init,0)}}
+$('tabE').onclick=()=>setModo('entrar');$('tabC').onclick=()=>setModo('criar');
+$('lf').onsubmit=async e=>{
+  e.preventDefault();const b=$('lb'),email=$('em').value.trim(),pw=$('pw').value;
+  if(pw.length<8)return msg('A senha precisa ter pelo menos 8 caracteres.',true);
+  b.disabled=true;msg('Um instante…');
+  try{
+    if(modo==='nova'){
+      const {error}=await SB.auth.updateUser({password:pw});if(error)throw error;
+      const {data:{session}}=await SB.auth.getSession();modo='entrar';entrou(session);history.replaceState(null,'',location.pathname);
+    }else if(modo==='criar'){
+      const {data,error}=await SB.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
+      if(!data.session){setModo('entrar');msg('Pronto! Enviamos um link de confirmação para o seu e-mail. Se não chegar, olhe o spam ou use “Esqueci minha senha”.')}
+    }else{
+      const {error}=await SB.auth.signInWithPassword({email,password:pw});if(error)throw error;msg('');
+    }
+  }catch(err){msg(T(err.message||''),true)}finally{b.disabled=false}
+};
+$('forgot').onclick=async e=>{
+  e.preventDefault();const email=$('em').value.trim();
+  if(!email)return msg('Digite seu e-mail acima e clique de novo.',true);
+  const {error}=await SB.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  msg(error?T(error.message):'Se este e-mail tiver cadastro, enviamos o link para criar uma nova senha.',!!error);
+};
+$('out').onclick=()=>SB.auth.signOut();
+SB.auth.onAuthStateChange((ev,s)=>{
+  if(ev==='PASSWORD_RECOVERY'){mostrar(false);setModo('nova')}
+  else if(s&&ev!=='SIGNED_OUT'){if(modo!=='nova')entrou(s)}
+  else{
+    uid=null;cvId=null;cvJson=null;LS.del('cv_text');LS.del('cv_id');
+    ['cv','job','busca'].forEach(i=>{$(i).value=''});['cvout','hist'].forEach(i=>{$(i).textContent=''});$('res').hidden=true;status('');
+    mostrar(false);if(modo!=='nova')setModo('entrar');
+  }
+});
+if(/type=recovery/.test(location.hash))setModo('nova');
+</script>
+</body>
+</html>
