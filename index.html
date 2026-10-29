@@ -144,6 +144,15 @@ q{color:var(--mut)}
 
 <section id="res" hidden></section>
 
+<section id="adapted" hidden>
+<h2>3. Currículo adaptado</h2>
+<p class="hint">A adaptação usa apenas informações do currículo original. Revise o conteúdo antes de exportar.</p>
+<button id="adapt">Gerar currículo adaptado</button>
+<button id="pdf" class="sec" disabled>Gerar PDF</button>
+<div id="adaptStatus" role="status" aria-live="polite"></div>
+<div id="adaptedOut"></div>
+</section>
+
 <section>
 <h2>Histórico de vagas</h2>
 <label for="busca">Pesquisar por cargo, empresa, trecho da vaga ou ID (ex.: 3)</label>
@@ -154,6 +163,7 @@ q{color:var(--mut)}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
@@ -164,7 +174,7 @@ function status(msg,isErr){const s=$('status');s.textContent=msg;s.className=isE
 function el(t,txt,cls){const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
 
 // ---------- início ----------
-let cvId=null,uid=null;
+let cvId=null,uid=null,lastAnalysis=null,adaptedData=null;
 async function init(){
   $('cv').value=LS.get('cv_text')||'';
   try{
@@ -253,7 +263,7 @@ $('go').onclick=async()=>{
   const b=$('go');b.disabled=true;status('Analisando a vaga…');
   try{
     const r=await api('analisar',{curriculo_id:cvId,vaga:job});
-    render(r);loadHist();status('Análise pronta.');$('res').scrollIntoView({behavior:'smooth'});
+    lastAnalysis=r;render(r);$('adapted').hidden=false;loadHist();status('Análise pronta.');$('res').scrollIntoView({behavior:'smooth'});
   }catch(e){status(e.message,true)}finally{b.disabled=false}
 };
 function render(r){
@@ -278,6 +288,73 @@ function render(r){
   });
   w.appendChild(t);o.appendChild(w);candForm(r);
 }
+
+const ADAPT_API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/adaptar';
+async function adaptarApi(op,vagaId){
+  const {data:{session}}=await SB.auth.getSession();
+  if(!session)throw new Error('Sua sessão terminou. Entre novamente.');
+  const r=await fetch(ADAPT_API,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token,apikey:'sb_publishable_B4elnC2qw2D_xGueQCwArQ_65lwTVG9'},body:JSON.stringify({op,vaga_id:vagaId})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||('Erro '+r.status+' ao adaptar o currículo.'));
+  return d;
+}
+function renderAdapted(r){
+  adaptedData=r.adaptado||r;
+  const c=adaptedData, o=$('adaptedOut');o.textContent='';
+  const name=el('h3',c.nome||c.titulo||'Currículo adaptado');o.appendChild(name);
+  const fields=[
+    ['Perfil profissional',c.resumo||c.perfil],
+    ['Experiência profissional',c.experiencias],
+    ['Projetos',c.projetos],
+    ['Formação',c.formacao],
+    ['Habilidades',c.habilidades],
+    ['Idiomas',c.idiomas]
+  ];
+  for(const [title,value] of fields){
+    if(value==null||value===''||(Array.isArray(value)&&!value.length))continue;
+    o.appendChild(el('h3',title));
+    const d=el('div');d.style.whiteSpace='pre-wrap';d.style.marginBottom='10px';
+    if(Array.isArray(value)){
+      const ul=el('ul');
+      value.forEach(item=>{const li=el('li');li.textContent=typeof item==='string'?item:Object.entries(item||{}).map(([k,v])=>k+': '+(Array.isArray(v)?v.join(', '):v??'')).join(' · ');ul.appendChild(li)});
+      d.appendChild(ul);
+    }else if(typeof value==='object'){
+      d.textContent=Object.entries(value).map(([k,v])=>k+': '+(Array.isArray(v)?v.join(', '):typeof v==='object'?JSON.stringify(v):v)).join('\n');
+    }else d.textContent=value;
+    o.appendChild(d);
+  }
+  (r.avisos||[]).forEach(a=>o.appendChild(el('p',a,'hint')));
+  $('pdf').disabled=false;
+}
+$('adapt').onclick=async()=>{
+  if(!cvId)return status('Estruture o currículo primeiro.',true);
+  if(!lastAnalysis||!lastAnalysis.id)return status('Analise a vaga novamente antes de gerar o currículo adaptado.',true);
+  const b=$('adapt');b.disabled=true;$('pdf').disabled=true;
+  $('adaptStatus').textContent='Gerando currículo adaptado…';$('adaptStatus').className='';
+  try{const r=await adaptarApi('gerar',lastAnalysis.id);renderAdapted(r);$('adaptStatus').textContent='Currículo adaptado gerado. Revise antes de exportar o PDF.'}
+  catch(e){$('adaptStatus').textContent=e.message;$('adaptStatus').className='err'}
+  finally{b.disabled=false}
+};
+$('pdf').onclick=()=>{
+  if(!adaptedData)return;
+  if(!window.jspdf?.jsPDF){$('adaptStatus').textContent='Não foi possível carregar o gerador de PDF. Verifique sua conexão.';$('adaptStatus').className='err';return}
+  const doc=new jspdf.jsPDF({unit:'mm',format:'a4'}),margin=18,maxW=174;let y=20;
+  const add=(txt,size=10,bold=false,after=4)=>{
+    doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);
+    const lines=doc.splitTextToSize(String(txt??''),maxW),h=lines.length*(size*.42+1.5);
+    if(y+h>280){doc.addPage();y=20}doc.text(lines,margin,y);y+=h+after;
+  };
+  const section=t=>{if(y>270){doc.addPage();y=20}doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(t,margin,y);y+=7};
+  const c=adaptedData;
+  add(c.nome||c.titulo||'Currículo',18,true,3);
+  if(c.titulo&&c.nome)add(c.titulo,11,false,5);
+  const fmt=v=>Array.isArray(v)?v.map(x=>typeof x==='string'?x:Object.entries(x||{}).map(([k,z])=>k+': '+(Array.isArray(z)?z.join(', '):z??'')).join(' — ')).join('\n'):typeof v==='object'&&v!==null?Object.entries(v).map(([k,z])=>k+': '+(Array.isArray(z)?z.join(', '):z??'')).join('\n'):String(v??'');
+  for(const [t,v] of [['Perfil profissional',c.resumo||c.perfil],['Experiência profissional',c.experiencias],['Projetos',c.projetos],['Formação',c.formacao],['Habilidades',c.habilidades],['Idiomas',c.idiomas]]){
+    if(v==null||v===''||(Array.isArray(v)&&!v.length))continue;section(t);add(fmt(v),10,false,5);
+  }
+  doc.save('curriculo_adaptado.pdf');
+};
+
 const STS={interessada:'Interessada',candidatou:'Candidatei',entrevista:'Entrevista',oferta:'Oferta',recusada:'Recusada',desistiu:'Desisti'};
 function candForm(r){
   const o=$('res'),c=r.candidatura||{};
@@ -354,7 +431,7 @@ SB.auth.onAuthStateChange((ev,s)=>{
   if(ev==='PASSWORD_RECOVERY'){mostrar(false);setModo('nova')}
   else if(s&&ev!=='SIGNED_OUT'){if(modo!=='nova')entrou(s)}
   else{
-    uid=null;cvId=null;cvJson=null;LS.del('cv_text');LS.del('cv_id');
+    uid=null;cvId=null;cvJson=null;lastAnalysis=null;adaptedData=null;LS.del('cv_text');LS.del('cv_id');
     ['cv','job','busca'].forEach(i=>{$(i).value=''});['cvout','hist'].forEach(i=>{$(i).textContent=''});$('res').hidden=true;status('');
     mostrar(false);if(modo!=='nova')setModo('entrar');
   }
