@@ -13,7 +13,7 @@
 <main>
 <header>
 <h1>Buscar vagas</h1>
-<p class="hint">Pesquise vagas por cargo, localização e modalidade. Esta versão consulta somente a fonte autorizada que foi configurada para o projeto.</p>
+<p class="hint">A busca automática está temporariamente suspensa enquanto validamos uma fonte aberta com autorização de uso. Nenhum site de empregos será consultado por scraping não autorizado.</p>
 </header>
 <section>
 <h2>1. Informe o que você procura</h2>
@@ -23,7 +23,7 @@
 <input id="local" value="Brasil" placeholder="Ex.: São Paulo">
 <label for="modalidade">Modalidade</label>
 <select id="modalidade"><option>Todas</option><option>Remote</option><option>Hybrid</option><option>On-site</option></select>
-<button id="buscar">Buscar vagas</button>
+<button id="buscar" disabled title="Busca temporariamente suspensa">Busca temporariamente suspensa</button>
 <div id="status" role="status" aria-live="polite"></div>
 </section>
 <section id="resultados" hidden>
