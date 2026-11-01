@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buscar vagas | Match de Vagas</title>
+<style>
+:root{color-scheme:light;--bg:#FFF3B8;--card:#FFFDF2;--ink:#2A1D18;--mut:#6B5A52;--line:#EBDB94;--ac:#B4472D;--ok:#1B7F4B;--bad:#A1123A}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}main{max-width:780px;margin:auto;padding:28px 18px 60px}section{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--ac);border-radius:10px;padding:18px;margin-top:16px}h1{margin:0;font-size:1.8rem}h2{font-size:1.15rem}label{display:block;font-weight:600;margin:12px 0 4px}input,select{width:100%;font:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px}button{font:inherit;font-weight:600;border-radius:6px;padding:9px 16px;border:1px solid var(--ac);background:var(--ac);color:#fff;cursor:pointer;margin:12px 8px 0 0}button:disabled{opacity:.55;cursor:wait}.hint{color:var(--mut);font-size:.93rem}.err{color:var(--bad);font-weight:600}.card{border-top:1px solid var(--line);padding:14px 0}.card:first-child{border-top:0}.card h3{margin:0 0 5px}.card p{margin:3px 0}.tag{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 7px;margin:4px 5px 0 0;font-size:.85rem}.verified{color:var(--ok);font-weight:600}.unverified{color:var(--bad);font-weight:600}a{color:var(--ac);font-weight:600}.choice{margin-top:20px;padding-top:16px;border-top:2px solid var(--line)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Buscar vagas</h1>
+<p class="hint">Pesquise vagas por cargo, localização e modalidade. Esta versão consulta somente a fonte autorizada que foi configurada para o projeto.</p>
+</header>
+<section>
+<h2>1. Informe o que você procura</h2>
+<label for="cargo">Cargo ou palavras-chave</label>
+<input id="cargo" placeholder="Ex.: Analista de Dados Jr">
+<label for="local">Localização</label>
+<input id="local" value="Brasil" placeholder="Ex.: São Paulo">
+<label for="modalidade">Modalidade</label>
+<select id="modalidade"><option>Todas</option><option>Remote</option><option>Hybrid</option><option>On-site</option></select>
+<button id="buscar">Buscar vagas</button>
+<div id="status" role="status" aria-live="polite"></div>
+</section>
+<section id="resultados" hidden>
+<h2>2. Vagas encontradas</h2>
+<div id="lista"></div>
+<div id="escolha" class="choice" hidden>
+<strong>Qual vaga você quer fazer o Match com seu CV?</strong>
+<p id="selecionada" class="hint"></p>
+<button id="continuar">Continuar para o Match</button>
+</div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB=supabase.createClient('https://vzyvnlboghpzlewirook.supabase.co','sb_publishable_B4elnC2qw2D_xGueQCwArQ_65lwTVG9');
+const SEARCH='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/buscar-vagas-scraping';
+let vagaSelecionada=null;
+const $=id=>document.getElementById(id);
+function status(t,err=false){$('status').textContent=t;$('status').className=err?'err':'hint'}
+function escLink(url){try{return new URL(url).href}catch{return '#'}}
+async function buscar(){
+ const cargo=$('cargo').value.trim(),local=$('local').value.trim()||'Brasil',modalidade=$('modalidade').value;
+ if(cargo.length<2)return status('Informe o cargo ou palavras-chave.',true);
+ const b=$('buscar');b.disabled=true;status('Buscando vagas...');$('resultados').hidden=true;$('lista').textContent='';$('escolha').hidden=true;
+ try{
+  const {data:{session}}=await SB.auth.getSession();
+  if(!session)throw new Error('Entre no Match de Vagas antes de pesquisar.');
+  const r=await fetch(SEARCH,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({cargo,localizacao:local,modalidade})});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Não foi possível buscar as vagas.');
+  const vagas=d.resultados||[];$('resultados').hidden=false;
+  if(!vagas.length){$('lista').textContent='Nenhuma vaga encontrada para estes critérios.';status('Busca concluída.');return}
+  vagas.forEach((v,i)=>{
+   const card=document.createElement('article');card.className='card';
+   const h=document.createElement('h3');h.textContent=v.cargo||'Vaga sem título';card.appendChild(h);
+   card.appendChild(Object.assign(document.createElement('p'),{textContent:[v.empresa,v.localizacao].filter(Boolean).join(' · ')||'Empresa ou localização não informada'}));
+   if(v.modalidade)card.appendChild(Object.assign(document.createElement('span'),{textContent:v.modalidade,className:'tag'}));
+   card.appendChild(Object.assign(document.createElement('span'),{textContent:v.link_verificado?'Link verificado':'Link não verificado',className:v.link_verificado?'verified':'unverified tag'}));
+   const p=document.createElement('p');const a=document.createElement('a');a.href=escLink(v.link);a.target='_blank';a.rel='noopener noreferrer';a.textContent='Abrir anúncio';p.appendChild(a);card.appendChild(p);
+   const bt=document.createElement('button');bt.textContent='Selecionar esta vaga';bt.onclick=()=>selecionar(v);card.appendChild(bt);$('lista').appendChild(card);
+  });
+  status(vagas.length+' vaga(s) encontrada(s).');
+ }catch(e){status(e.message,true)}finally{b.disabled=false}
+}
+function selecionar(v){vagaSelecionada=v;$('escolha').hidden=false;$('selecionada').textContent=[v.cargo,v.empresa,v.localizacao].filter(Boolean).join(' · ');$('escolha').scrollIntoView({behavior:'smooth',block:'center'})}
+$('buscar').onclick=buscar;
+$('continuar').onclick=()=>{
+ if(!vagaSelecionada)return;
+ sessionStorage.setItem('match_vaga_selecionada',JSON.stringify(vagaSelecionada));
+ window.location.href='index.html?origem=busca-vagas#match';
+};
+</script>
+</body>
+</html>
