@@ -136,7 +136,7 @@ q{color:var(--mut)}
 <input id="file" type="file" accept=".pdf,.docx,.txt">
 <label for="cv">Ou cole o texto do currículo</label>
 <textarea id="cv" placeholder="Cole o texto do seu currículo aqui"></textarea>
-<button id="struct">Estruturar currículo</button>
+<button id="struct" disabled>Estruturação temporariamente suspensa</button>
 <div id="cvout"></div>
 </section>
 
@@ -144,7 +144,7 @@ q{color:var(--mut)}
 <h2>2. A vaga</h2>
 <label for="job">Cole a descrição completa da vaga</label>
 <textarea id="job" placeholder="Cole aqui o título, as responsabilidades e os requisitos da vaga"></textarea>
-<button id="go">Analisar</button>
+<button id="go" disabled>Análise temporariamente suspensa</button>
 <div id="status" role="status" aria-live="polite"></div>
 </section>
 
@@ -153,7 +153,7 @@ q{color:var(--mut)}
 <section id="adapted" hidden>
 <h2>3. Currículo adaptado</h2>
 <p class="hint">A adaptação usa apenas informações do currículo original. Revise o conteúdo antes de exportar.</p>
-<button id="adapt">Gerar currículo adaptado</button>
+<button id="adapt" disabled>Adaptação temporariamente suspensa</button>
 <button id="pdf" class="sec" disabled>Gerar PDF</button>
 <div id="adaptStatus" role="status" aria-live="polite"></div>
 <div id="adaptedOut"></div>
