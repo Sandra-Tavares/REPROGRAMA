@@ -125,6 +125,12 @@ q{color:var(--mut)}
 <main>
 
 <section>
+<h2>Buscar vagas</h2>
+<p class="hint">Pesquise oportunidades e escolha uma vaga para preencher automaticamente a etapa de Match.</p>
+<a href="buscar.html" style="color:var(--ac);font-weight:700">Abrir busca de vagas</a>
+</section>
+
+<section>
 <h2>1. Seu currículo</h2>
 <label for="file">Enviar arquivo (PDF, DOCX ou TXT)</label>
 <input id="file" type="file" accept=".pdf,.docx,.txt">
@@ -134,7 +140,7 @@ q{color:var(--mut)}
 <div id="cvout"></div>
 </section>
 
-<section>
+<section id="match">
 <h2>2. A vaga</h2>
 <label for="job">Cole a descrição completa da vaga</label>
 <textarea id="job" placeholder="Cole aqui o título, as responsabilidades e os requisitos da vaga"></textarea>
@@ -153,17 +159,7 @@ q{color:var(--mut)}
 <div id="adaptedOut"></div>
 </section>
 
-<section id="gmailBox">
-<h2>Alertas de vagas pelo Gmail</h2>
-<p class="hint">Conecte seu Gmail para consultar alertas de vagas recebidos. O aplicativo apenas lê mensagens; não envia, exclui nem altera e-mails.</p>
-<div id="gmailStatus" class="hint" role="status" aria-live="polite">Verificando conexão...</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-<button type="button" id="gmailConnect">Conectar Gmail</button>
-<button type="button" id="gmailImport" class="sec" disabled>Importar alertas</button>
-<button type="button" id="gmailDisconnect" class="sec" hidden>Desconectar Gmail</button>
-</div>
-<div id="gmailResults"></div>
-</section>
+
 
 <section>
 <h2>Histórico de vagas</h2>
@@ -192,6 +188,17 @@ async function init(){
   try{
     const c=await api('cv_ultimo');
     if(c){cvId=c.curriculo_id;cvJson=c.dados;if(!$('cv').value)$('cv').value=c.texto;showCv()}
+    const selecionada=sessionStorage.getItem('match_vaga_selecionada');
+    if(selecionada){
+      try{
+        const v=JSON.parse(selecionada);
+        const descricao=v.descricao||v.description||v.texto||v.conteudo||'';
+        $('job').value=[v.cargo,v.empresa,v.localizacao,descricao].filter(Boolean).join('\\n\\n');
+        sessionStorage.removeItem('match_vaga_selecionada');
+        $('match').scrollIntoView({behavior:'smooth',block:'start'});
+        status(descricao?'Vaga selecionada carregada. Confira a descrição e clique em Analisar.':'Vaga selecionada. Confira os dados e complete a descrição antes de analisar.');
+      }catch(e){sessionStorage.removeItem('match_vaga_selecionada')}
+    }
     loadHist();
   }catch(e){status(e.message,true)}
 }
@@ -243,116 +250,6 @@ async function api(action,body){
   if(!r.ok)throw new Error(d.error||('Erro '+r.status+' no servidor.'));
   return d;
 }
-
-// ---------- Integração Gmail ----------
-const GMAIL_API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/gmail-oauth';
-const GMAIL_IMPORT='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/gmail-importar';
-
-async function gmailRequest(url,body){
-  const {data:{session}}=await SB.auth.getSession();
-  if(!session)throw new Error('Sua sessão terminou. Entre novamente.');
-  let response;
-  try{
-    response=await fetch(url,{
-      method:'POST',
-      headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},
-      body:JSON.stringify(body||{})
-    });
-  }catch(e){throw new Error('Não consegui acessar a integração Gmail. Verifique sua conexão.')}
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||('Erro '+response.status+' na integração Gmail.'));
-  return data;
-}
-function gmailMessage(message,isError){
-  const node=$('gmailStatus');
-  if(!node)return;
-  node.textContent=message;
-  node.className=isError?'err':'hint';
-}
-async function gmailStatus(){
-  try{
-    const data=await gmailRequest(GMAIL_API,{action:'status'});
-    const connected=!!data.conectado;
-    $('gmailImport').disabled=!connected;
-    $('gmailDisconnect').hidden=!connected;
-    $('gmailConnect').hidden=connected;
-    gmailMessage(connected?'Gmail conectado: '+data.conta:'Nenhuma conta Gmail conectada.');
-  }catch(error){
-    $('gmailImport').disabled=true;
-    $('gmailDisconnect').hidden=true;
-    $('gmailConnect').hidden=false;
-    gmailMessage(error.message,true);
-  }
-}
-$('gmailConnect').onclick=async()=>{
-  const button=$('gmailConnect');
-  button.disabled=true;
-  gmailMessage('Preparando a autorização do Google...');
-  try{
-    const data=await gmailRequest(GMAIL_API,{action:'connect'});
-    if(!data.authorization_url||!data.authorization_url.startsWith('https://accounts.google.com/'))
-      throw new Error('O servidor retornou um endereço de autorização inválido.');
-    window.location.assign(data.authorization_url);
-  }catch(error){
-    gmailMessage(error.message,true);
-    button.disabled=false;
-  }
-};
-$('gmailImport').onclick=async()=>{
-  const button=$('gmailImport');
-  button.disabled=true;
-  $('gmailResults').textContent='';
-  gmailMessage('Consultando alertas dos últimos 30 dias...');
-  try{
-    const data=await gmailRequest(GMAIL_IMPORT,{});
-    gmailMessage('Consulta concluída: '+data.vagas_novas+' vaga(s) nova(s), '+data.duplicadas+' duplicada(s) e '+data.ignoradas+' mensagem(ns) ignorada(s).');
-    const results=$('gmailResults');
-    results.appendChild(el('p','Mensagens consultadas: '+data.mensagens_consultadas,'hint'));
-    (data.vagas||[]).forEach(job=>{
-      const card=el('div');
-      card.style.borderTop='1px solid var(--line)';
-      card.style.padding='10px 0';
-      card.appendChild(el('strong',job.cargo||'Vaga sem título'));
-      card.appendChild(el('p',[job.empresa,job.localizacao].filter(Boolean).join(' · ')||'Empresa ou local não informado'));
-      if(job.link){
-        const link=el('a','Abrir anúncio');
-        link.href=job.link;
-        link.target='_blank';
-        link.rel='noopener noreferrer';
-        link.style.color='var(--ac)';
-        link.style.fontWeight='600';
-        card.appendChild(link);
-        card.appendChild(el('p','Link recebido por e-mail; ainda não verificado.','hint'));
-      }else{
-        card.appendChild(el('p','O e-mail não apresentou um link de vaga identificável.','hint'));
-      }
-      results.appendChild(card);
-    });
-    if(!(data.vagas||[]).length)results.appendChild(el('p','Nenhuma vaga nova foi extraída nesta consulta.','hint'));
-    if(data.aviso)results.appendChild(el('p',data.aviso,'hint'));
-    loadHist();
-  }catch(error){
-    gmailMessage(error.message,true);
-  }finally{
-    button.disabled=false;
-  }
-};
-$('gmailDisconnect').onclick=async()=>{
-  if(!confirm('Desconectar o Gmail deste aplicativo? O token armazenado será apagado.'))return;
-  const button=$('gmailDisconnect');
-  button.disabled=true;
-  try{
-    const data=await gmailRequest(GMAIL_API,{action:'disconnect'});
-    $('gmailResults').textContent='';
-    gmailMessage(data.mensagem||'Gmail desconectado.');
-    await gmailStatus();
-  }catch(error){
-    gmailMessage(error.message,true);
-  }finally{
-    button.disabled=false;
-  }
-};
-// ---------- Fim da integração Gmail ----------
 
 // ---------- 1. estruturar currículo ----------
 function showCv(){
@@ -528,7 +425,6 @@ function entrou(s){
   mostrar(true);
   $('who').textContent=s.user.email;
   if(uid!==s.user.id){uid=s.user.id;setTimeout(init,0)}
-  setTimeout(()=>{if($('gmailStatus'))gmailStatus()},0);
 }
 $('tabE').onclick=()=>setModo('entrar');$('tabC').onclick=()=>setModo('criar');
 $('lf').onsubmit=async e=>{
@@ -564,10 +460,6 @@ SB.auth.onAuthStateChange((ev,s)=>{
   }
 });
 if(/type=recovery/.test(location.hash))setModo('nova');
-if(new URLSearchParams(location.search).get('gmail')==='connected'){
-  history.replaceState(null,'',location.pathname);
-  setTimeout(()=>gmailMessage('Gmail conectado com sucesso.'),0);
-}
 </script>
 </body>
 </html>
