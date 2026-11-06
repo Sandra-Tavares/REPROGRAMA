@@ -359,10 +359,10 @@ $('pdf').onclick=()=>{
   if(!adaptedData)return;
   if(!window.jspdf?.jsPDF){$('adaptStatus').textContent='Não foi possível carregar o gerador de PDF. Verifique sua conexão.';$('adaptStatus').className='err';return}
   const doc=new jspdf.jsPDF({unit:'mm',format:'a4'}),margin=18,maxW=174;let y=20;
-  const add=(txt,size=10,bold=false,after=4)=>{
+  const add=(txt,size=10,bold=false,after=4,align='justify')=>{
     doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);
     const lines=doc.splitTextToSize(String(txt??''),maxW),h=lines.length*(size*.42+1.5);
-    if(y+h>280){doc.addPage();y=20}doc.text(lines,margin,y);y+=h+after;
+    if(y+h>280){doc.addPage();y=20}doc.text(lines,margin,y,{align:bold?'left':align});y+=h+after;
   };
   const section=t=>{if(y>270){doc.addPage();y=20}doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(t,margin,y);y+=7};
   const c=adaptedData;
