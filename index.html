@@ -210,7 +210,7 @@ async function readPdf(buf){
     const w=await (await fetch(base+'pdf.worker.min.js')).blob();
     pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(w);
   }
-  const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out='';
+  const pdf=await pdfjsLib.getDocument({data:buf,isEvalSupported:false}).promise;let out='';
   for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();out+=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n'}
   return out;
 }
