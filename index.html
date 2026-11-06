@@ -166,8 +166,8 @@ q{color:var(--mut)}
 </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3" crossorigin="anonymous"></script>
 <script>
 const $=id=>document.getElementById(id);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
@@ -202,20 +202,29 @@ async function init(){
 $('cv').oninput=()=>{};
 
 // ---------- leitura de arquivos ----------
-function loadScript(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>no(new Error('Não foi possível carregar a biblioteca de leitura. Verifique a internet ou cole o texto do currículo.'));document.head.appendChild(s)})}
+function loadScript(u,integrity){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;if(integrity){s.integrity=integrity;s.crossOrigin='anonymous';}s.onload=ok;s.onerror=()=>no(new Error('Não foi possível carregar a biblioteca de leitura. Verifique a internet ou cole o texto do currículo.'));document.head.appendChild(s)})}
+let pdfjsModulePromise=null;
 async function readPdf(buf){
-  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-  if(!window.pdfjsLib){
-    await loadScript(base+'pdf.min.js');
-    const w=await (await fetch(base+'pdf.worker.min.js')).blob();
-    pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(w);
+  // PDF.js 6 usa módulos ES; manter o worker na mesma versão da biblioteca.
+  const base='https://cdn.jsdelivr.net/npm/pdfjs-dist@6.5.438/build/';
+  if(!pdfjsModulePromise){
+    pdfjsModulePromise=import(base+'pdf.mjs').catch(e=>{pdfjsModulePromise=null;throw e});
   }
-  const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out='';
-  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();out+=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n'}
-  return out;
+  const pdfjsLib=await pdfjsModulePromise;
+  pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.mjs';
+  const pdf=await pdfjsLib.getDocument({data:buf,isEvalSupported:false}).promise;
+  try{
+    let out='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const pg=await pdf.getPage(i);
+      const tc=await pg.getTextContent();
+      out+=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('')+'\n';
+    }
+    return out;
+  }finally{await pdf.destroy()}
 }
 async function readDocx(buf){
-  if(!window.mammoth)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+  if(!window.mammoth)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js','sha384-8NWE3bZDrmRI4IePMoQaEoLhAQ1MmRMJkdNgnGiHRFanTqsFKr0TmK6aSZvFJ/PO');
   return (await mammoth.extractRawText({arrayBuffer:buf})).value;
 }
 $('file').onchange=async e=>{
