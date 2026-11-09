@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Match CV × Vaga</title>
+<title>TESTE IA — Match CV × Vaga</title>
 <style>
 :root{color-scheme:light;--bg:#FFF3B8;--card:#FFFDF2;--ink:#2A1D18;--mut:#6B5A52;--line:#EBDB94;--ac:#B4472D;--acx:#fff;--ok:#1B7F4B;--mid:#9A6200;--bad:#A1123A}
 *{box-sizing:border-box}
@@ -243,7 +243,7 @@ $('file').onchange=async e=>{
 };
 
 // ---------- servidor (função do Supabase) ----------
-const API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/api';
+const API='https://vzyvnlboghpzlewirook.supabase.co/functions/v1/api-ia-teste';
 const SB=supabase.createClient('https://vzyvnlboghpzlewirook.supabase.co','sb_publishable_B4elnC2qw2D_xGueQCwArQ_65lwTVG9');
 async function api(action,body){
   const {data:{session}}=await SB.auth.getSession();
