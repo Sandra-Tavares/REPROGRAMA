@@ -140,6 +140,11 @@ q{color:var(--mut)}
 <h2>2. A vaga</h2>
 <label for="job">Cole a descrição completa da vaga</label>
 <textarea id="job" placeholder="Cole aqui o título, as responsabilidades e os requisitos da vaga"></textarea>
+<div class="privacy-notice" style="border:1px solid var(--line);padding:14px;border-radius:8px;margin-top:14px;background:#FFF8DB">
+<strong>Aviso de privacidade — análise com Gemini (teste)</strong>
+<p class="hint">A descrição da vaga e o conteúdo profissional do seu currículo serão enviados à API Google Gemini para análise de compatibilidade. O sistema tenta retirar contatos e identificadores comuns antes do envio, mas não garante anonimização completa. Na modalidade gratuita, o Google poderá usar os dados conforme seus termos, inclusive para melhoria dos serviços. Não utilize currículos reais nesta fase de testes.</p>
+<label style="display:flex;gap:9px;align-items:flex-start;font-weight:normal"><input type="checkbox" id="consentimentoIA" style="width:auto;margin-top:5px;flex:none">Estou ciente do compartilhamento com o Google Gemini e concordo em realizar esta análise de teste.</label>
+</div>
 <button id="go">Analisar vaga</button>
 <div id="status" role="status" aria-live="polite"></div>
 </section>
@@ -285,9 +290,10 @@ $('go').onclick=async()=>{
   const job=$('job').value.trim(),cv=$('cv').value.trim();
   if(!cvId)return status('Estruture o currículo primeiro (passo 1).',true);
   if(job.length<150)return status('Cole a descrição completa da vaga (está curta demais).',true);
+  if(!$('consentimentoIA').checked)return status('Leia o aviso de privacidade e marque a confirmação para utilizar o Gemini.',true);
   const b=$('go');b.disabled=true;status('Analisando a vaga…');
   try{
-    const r=await api('analisar',{curriculo_id:cvId,vaga:job});
+    const r=await api('analisar',{curriculo_id:cvId,vaga:job,consentimento_ia:true});
     lastAnalysis=r;render(r);$('adapted').hidden=false;loadHist();status('Análise pronta.');$('res').scrollIntoView({behavior:'smooth'});
   }catch(e){status(e.message,true)}finally{b.disabled=false}
 };
